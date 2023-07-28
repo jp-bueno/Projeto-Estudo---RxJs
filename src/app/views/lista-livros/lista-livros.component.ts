@@ -1,7 +1,7 @@
 import { FormControl } from '@angular/forms';
-import { VolumeInfo, ImageLinks, Item } from './../../models/interfaces';
+import { VolumeInfo, ImageLinks, Item, LivrosResultado } from './../../models/interfaces';
 import { Component } from '@angular/core';
-import { Subscription, debounceTime, filter, map, switchMap, tap } from 'rxjs';
+import { Subscription, catchError, debounceTime, filter, map, of, switchMap, tap, throwError } from 'rxjs';
 import { Livro } from 'src/app/models/interfaces';
 import { LivroVolumeInfo } from 'src/app/models/livroVolumeInfo';
 import { LivroService } from 'src/app/service/livro.service';
@@ -15,8 +15,23 @@ const PAUSA =300
 export class ListaLivrosComponent {
 
   campoBusca = new FormControl();
+  mensagemErro = ''
+  livrosResultado: LivrosResultado
 
   constructor(private service: LivroService) { }
+
+  totalDeLivros$ = this.campoBusca.valueChanges
+  .pipe(
+    debounceTime(PAUSA),
+    filter((valorDigitado) => valorDigitado.length >= 3),
+    tap(() => console.log('Fluxo inicial')),
+    switchMap((valorDigitado) => this.service.buscar(valorDigitado)),
+    map(resultado => this.livrosResultado = resultado),
+    catchError(erro => {
+      console.log(erro)
+      return of()
+    })
+  )
 
   //Quando ela representa um observable utilize o $
   livrosEncontrados$ = this.campoBusca.valueChanges
@@ -26,8 +41,12 @@ export class ListaLivrosComponent {
       tap(() => console.log('Fluxo inicial')),
       switchMap((valorDigitado) => this.service.buscar(valorDigitado)),
       tap((retornoAPI) => console.log(retornoAPI)),
-      map((items) => this.livrosResultadoParaLivros(items)
-      )
+      map(resultado => resultado.items ?? []),
+      map((items) => this.livrosResultadoParaLivros(items)),
+      catchError(erro => {
+        console.log(erro)
+        return throwError(() => Error(this.mensagemErro = 'Ops ocorreu um erro. Recarregue a aplicação'))
+      })
     )
 
   // Conversão de Objeto
