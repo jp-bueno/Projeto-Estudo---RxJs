@@ -37,6 +37,7 @@ export interface ImageLinks {
 }
 
 export interface Item {
+    map(arg0: (item: any) => import("./livroVolumeInfo").LivroVolumeInfo): import("./livroVolumeInfo").LivroVolumeInfo[];
     volumeInfo: VolumeInfo
 }
 
